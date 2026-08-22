@@ -1,0 +1,14 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+
+/*
+ * Tailwind v4 resolves `dark:` against prefers-color-scheme by default, which cannot
+ * be toggled. This rebinds it to a `.dark` class on <html> so the theme switcher in
+ * uiStore can drive it. See PROJECT_PLAN.md §6.3.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-sans--font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}

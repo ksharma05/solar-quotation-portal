@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en" class="scheme-light dark:scheme-dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Solar Green Technology — Quotation Portal</title>
+    <script>
+      // Applies the stored theme before first paint so the page never flashes the
+      // wrong palette. Mirrors the logic in src/stores/uiStore.ts.
+      ;(function () {
+        var theme = 'auto'
+        try {
+          var raw = localStorage.getItem('sgt-ui')
+          if (raw) {
+            var parsed = JSON.parse(raw)
+            if (parsed && parsed.state && parsed.state.theme) theme = parsed.state.theme
+          }
+        } catch (e) {
+          /* private mode / blocked storage — fall back to auto */
+        }
+        var dark =
+          theme === 'dark' ||
+          (theme === 'auto' &&
+            window.matchMedia &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.classList.toggle('dark', dark)
+      })()
+    </script>
+  </head>
+  <body class="bg-white dark:bg-zinc-900">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
