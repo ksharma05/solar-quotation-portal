@@ -13,19 +13,16 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Split the framework from app code so a deploy does not invalidate the
-        // large, rarely-changing vendor chunks in returning users' caches.
+        // Split vendor code to keep app bundle small, but avoid circular dependencies
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined
           if (id.includes('react-dom') || id.includes('/react/') || id.includes('scheduler')) {
             return 'vendor-react'
           }
-          if (id.includes('@headlessui') || id.includes('motion') || id.includes('@floating-ui')) {
-            return 'vendor-ui'
-          }
           if (id.includes('zod') || id.includes('react-hook-form') || id.includes('@hookform')) {
             return 'vendor-forms'
           }
+          // Keep headlessui, motion, floating-ui with react to avoid circular deps
           return undefined
         },
       },
