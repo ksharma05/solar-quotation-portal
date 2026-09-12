@@ -81,8 +81,8 @@ export interface WordmarkSegment {
 }
 
 /**
- * The company name as the brand prints it: an orange leading "S", an olive "GREEN", and
- * black everywhere else.
+ * The company name as the brand prints it: an orange "O" in "SOLAR", an olive "GREEN",
+ * and black everywhere else.
  *
  * A function of the name rather than a literal, so COMPANY.name in constants/config.ts
  * stays the single source of truth. The joining space rides on the preceding segment, so
@@ -96,10 +96,11 @@ export function companyWordmark(name: string): WordmarkSegment[] {
 
     if (word === 'GREEN') return [{ text, color: COLORS.heading }]
 
-    if (index === 0 && word.startsWith('S')) {
+    if (index === 0 && word.startsWith('SO')) {
       return [
-        { text: 'S', color: COLORS.brandOrange },
-        { text: text.slice(1), color: COLORS.ink },
+        { text: 'S', color: COLORS.ink },
+        { text: 'O', color: COLORS.brandOrange },
+        { text: text.slice(2), color: COLORS.ink },
       ]
     }
 

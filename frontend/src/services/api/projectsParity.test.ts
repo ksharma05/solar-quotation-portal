@@ -274,10 +274,11 @@ describe('project pagination', () => {
 })
 
 describe('the brand wordmark', () => {
-  it('colours the leading S orange and GREEN olive, leaving the rest black', () => {
+  it('colours the O of SOLAR orange and GREEN olive, leaving the rest black', () => {
     expect(companyWordmark('Solar Green Technology')).toEqual([
-      { text: 'S', color: COLORS.brandOrange },
-      { text: 'OLAR ', color: COLORS.ink },
+      { text: 'S', color: COLORS.ink },
+      { text: 'O', color: COLORS.brandOrange },
+      { text: 'LAR ', color: COLORS.ink },
       { text: 'GREEN ', color: COLORS.heading },
       { text: 'TECHNOLOGY', color: COLORS.ink },
     ])
