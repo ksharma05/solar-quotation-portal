@@ -77,7 +77,11 @@ describe('BOM specification defaults', () => {
     expect(find('Module Mounting Structure')?.warranty).toContain('10 years')
     expect(find('DCDB')?.details).toContain('1 in 1 out')
     expect(find('AC Cable')?.details).toContain('10 sq mm')
-    expect(find('Earthing')?.details).toContain('Chemical GI Gel Earthing 3 no.')
+    // Earthing is no longer its own row: the reference prints one grouped "Protection"
+    // row whose Details cell stacks the arrestor, the earthing and the down-conductor.
+    expect(find('Earthing')).toBeUndefined()
+    expect(find('Protection')?.details).toContain('Chemical GI Gel Earthing 3 no.')
+    expect(find('Protection')?.detailsRich?.length).toBeGreaterThan(1)
     expect(find('DG Synchronise')).toBeUndefined()
   })
 
@@ -90,7 +94,8 @@ describe('BOM specification defaults', () => {
     expect(find('DCDB')?.details).toContain('32 in 32 out')
     expect(find('ACDB')?.details).toContain('630 Amps')
     expect(find('AC Cable')?.details).toContain('300 sq mm')
-    expect(find('Earthing')?.details).toContain('Copper Gel Earthing (51mm Dia) 9 no.')
+    expect(find('Earthing')).toBeUndefined()
+    expect(find('Protection')?.details).toContain('Copper Gel Earthing (51mm Dia) 9 no.')
     expect(find('DG Synchronise')?.warranty).toBe('5 year')
   })
 

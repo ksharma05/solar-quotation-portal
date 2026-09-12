@@ -23,11 +23,20 @@ export const milestoneSchema = z.object({
   description: z.string().trim().min(3, 'Describe this milestone'),
 })
 
+const richLinesSchema = z.array(z.array(z.object({ text: z.string(), bold: z.boolean().optional() })))
+
 export const bomRowSchema = z.object({
   material: z.string().trim().min(1, 'Material is required'),
   details: z.string(),
   quantity: z.string(),
   warranty: z.string(),
+  /**
+   * Generated rich rendering of `details` / `quantity`, carried through untouched.
+   * Editing the plain field in the form clears these — see BomSpecsForm — or the
+   * document would print the stale original.
+   */
+  detailsRich: richLinesSchema.optional(),
+  quantityRich: richLinesSchema.optional(),
 })
 
 export const quotationSchema = z
@@ -59,6 +68,12 @@ export const quotationSchema = z
     milestones: z.array(milestoneSchema).min(2, 'At least two milestones'),
 
     bom: z.array(bomRowSchema).min(1, 'The bill of materials cannot be empty'),
+
+    /**
+     * Reference projects to print. Empty is valid and common — the document then omits
+     * the "Some of our projects" section entirely.
+     */
+    referenceProjectIds: z.array(z.string()).default([]),
   })
   .superRefine((value, ctx) => {
     // Milestones must total exactly 100%. Tolerance absorbs float drift from

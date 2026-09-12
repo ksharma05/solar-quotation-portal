@@ -6,6 +6,7 @@ import {
   CurrencyRupeeIcon,
   DocumentTextIcon,
   HomeIcon,
+  PhotoIcon,
 } from '@heroicons/react/20/solid'
 import { Navbar, NavbarItem, NavbarSection, NavbarSpacer } from '@/components/ui/navbar'
 import {
@@ -31,6 +32,7 @@ const NAV = [
   { href: '/costing', label: 'Costing Sheet', Icon: CurrencyRupeeIcon },
   { href: '/quotation', label: 'New Quotation', Icon: DocumentTextIcon },
   { href: '/history', label: 'History', Icon: ArchiveBoxIcon },
+  { href: '/projects', label: 'Projects', Icon: PhotoIcon },
 ]
 
 export function MainLayout() {

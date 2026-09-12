@@ -7,33 +7,58 @@ import {
   buildWhatsAppUrl as clientBuildWhatsAppUrl,
   normaliseWhatsAppNumber as clientNormalise,
 } from '@/services/quotation/whatsapp'
+import { buildDocumentModel, quotationFileName } from '@/services/export/documentModel'
+import type { ResolvedProject } from '@/services/export/documentModel'
 
 /**
- * Loads the real Apps Script document builder and asserts it reproduces the two
- * sample quotations. buildDocumentModel is pure, so it runs in Node unchanged — the
- * layout is verifiable without deploying or opening a PDF.
+ * Asserts the document builder reproduces the two sample quotations.
+ *
+ * buildDocumentModel now lives in TypeScript (services/export/documentModel.ts) and is
+ * the single source of truth: the backend no longer renders anything, so the old
+ * DocumentModel.gs and PDF.gs are gone. Utils.gs, Pricing.gs, Share.gs and Email.gs are
+ * still loaded below, because those DO still run server-side and must not drift from
+ * their frontend counterparts.
  */
 
 const backendDir = fileURLToPath(new URL('../../../../backend/google-apps-script/', import.meta.url))
+
+/** A table cell's plain text, flattened out of its stacked rich runs. */
+function cellText(cell: { lines: { text: string }[][] }): string {
+  return cell.lines.map((runs) => runs.map((run) => run.text).join('')).join(' ')
+}
+
+/** Two photographs, enough to exercise the projects section. */
+const sampleProjects: ResolvedProject[] = [
+  {
+    id: 'mayo',
+    name: 'EPC - Mayo College Girls School, Ajmer',
+    capacity: '300 KW',
+    description: 'Rooftop grid-tied installation.',
+    images: [
+      { id: 'a', base64: 'AA==', mimeType: 'image/jpeg', width: 1600, height: 1200 },
+      { id: 'b', base64: 'AA==', mimeType: 'image/jpeg', width: 1600, height: 1200 },
+    ],
+  },
+]
 
 interface Section {
   type: string
   heading?: string
   header?: string[]
-  rows?: string[][]
+  rows?: { lines: { text: string }[][] }[][]
   items?: unknown[]
   lines?: string[]
   [key: string]: unknown
 }
 
 function loadBackend() {
-  const source = ['Utils.gs', 'Pricing.gs', 'DocumentModel.gs', 'Email.gs', 'Share.gs']
+  const source = ['Utils.gs', 'Pricing.gs', 'Company.gs', 'Email.gs', 'Share.gs']
     .map((file) => readFileSync(backendDir + file, 'utf8'))
     .join('\n')
   const factory = new Function(
     `${source}
-     return { buildDocumentModel, quotationFileName, buildWhatsAppUrl, buildWhatsAppMessage,
-              normaliseWhatsAppNumber, buildEmailSubject, buildEmailBody, computeQuotationTotals };`
+     return { buildWhatsAppUrl, buildWhatsAppMessage, normaliseWhatsAppNumber,
+              buildEmailSubject, buildEmailBody, computeQuotationTotals };`
   ) as () => Record<string, (...args: never[]) => never>
   return factory()
 }
@@ -75,7 +100,7 @@ function quotationFor(kind: 'anil' | 'vishwakarma') {
   }
 }
 
-function modelFor(kind: 'anil' | 'vishwakarma') {
+function modelFor(kind: 'anil' | 'vishwakarma', projects: ResolvedProject[] = []) {
   const quotation = quotationFor(kind)
   const totals = backend.computeQuotationTotals(
     quotation.capacityWp as never,
@@ -85,9 +110,11 @@ function modelFor(kind: 'anil' | 'vishwakarma') {
   return {
     quotation,
     totals,
-    model: backend.buildDocumentModel(quotation as never, totals as never) as unknown as {
-      sections: Section[]
-    },
+    model: buildDocumentModel(
+      quotation as never,
+      totals as never,
+      projects
+    ) as unknown as { sections: Section[] },
   }
 }
 
@@ -105,14 +132,14 @@ describe('document section order matches the DOCX samples', () => {
       'bomTable',
       'bullets', // Scope of Works
       'definitions',
-      'projects',
+      // No 'projects': none were selected. The section is omitted entirely.
     ])
   })
 
   it('Vishwakarma 325kW — subsidy section absent, as in the original', () => {
     const { model } = modelFor('vishwakarma')
     expect(model.sections.map((section) => section.type)).not.toContain('subsidyNote')
-    expect(model.sections).toHaveLength(10)
+    expect(model.sections).toHaveLength(9)
   })
 })
 
@@ -123,22 +150,23 @@ describe('the priced table', () => {
 
     expect(table.rows).toHaveLength(1)
     expect(table.heading).toBe('QUOTATION (10.28 KW – Panels with 10 KW inverter)')
-    expect(table.rows![0]).toEqual([
+    expect(table.rows![0].map(cellText)).toEqual([
       '1',
       'Supply of equipments and installation & commissioning',
       '10280 Wp',
       '₹ 36.30/WATT',
-      '₹3,73,116.00',
-      '₹4,06,323.32',
+      // The reference prints a space after the rupee sign.
+      '₹ 3,73,116.00',
+      '₹ 4,06,323.32',
     ])
   })
 
   it('carries the Vishwakarma figures', () => {
     const { model } = modelFor('vishwakarma')
     const table = model.sections.find((section) => section.type === 'priceTable')!
-    expect(table.rows![0][3]).toBe('₹ 25.18/WATT')
-    expect(table.rows![0][4]).toBe('₹81,87,374.50')
-    expect(table.rows![0][5]).toBe('₹89,16,050.83')
+    expect(cellText(table.rows![0][3])).toBe('₹ 25.18/WATT')
+    expect(cellText(table.rows![0][4])).toBe('₹ 81,87,374.50')
+    expect(cellText(table.rows![0][5])).toBe('₹ 89,16,050.83')
   })
 })
 
@@ -171,8 +199,8 @@ describe('subsidy note', () => {
   it('states the amount and the after-subsidy total', () => {
     const { model } = modelFor('anil')
     const note = model.sections.find((section) => section.type === 'subsidyNote')!
-    expect(note.lines![0]).toContain('₹78,000.00')
-    expect(note.lines![1]).toBe('Total Project cost after subsidy :- ₹3,28,323.32')
+    expect(note.lines![0]).toContain('₹ 78,000.00')
+    expect(note.lines![1]).toBe('Total Project cost after subsidy :- ₹ 3,28,323.32')
   })
 })
 
@@ -184,7 +212,7 @@ describe('milestones on the document', () => {
 
     expect(items).toHaveLength(3)
     expect(items[0].percentage).toBe(50)
-    expect(items[0].amountFormatted).toBe('₹1,64,161.66')
+    expect(items[0].amountFormatted).toBe('₹ 1,64,161.66')
     expect(items.reduce((sum, item) => sum + item.amount, 0)).toBeCloseTo(328_323.324, 6)
   })
 
@@ -201,24 +229,45 @@ describe('validity line', () => {
     const terms = model.sections.find(
       (section) => section.type === 'bullets' && section.heading === 'TERMS & CONDITIONS'
     )!
-    expect(terms.items as string[]).toContain(
-      'Above given quotation is valid till 10 days i.e. 24-04-2026'
+    const validity = (terms.items as { text: string; red?: boolean }[]).find((item) =>
+      item.text.startsWith('Above given quotation')
     )
+    expect(validity?.text).toBe('Above given quotation is valid till 10 days i.e. 24-04-2026')
+    // The reference sets this one bullet in red; the others stay black.
+    expect(validity?.red).toBe(true)
+    expect((terms.items as { red?: boolean }[]).filter((item) => item.red)).toHaveLength(1)
   })
 })
 
 describe('layout fidelity to the original DOCX', () => {
-  it('lists projects with name and capacity on separate lines, and photo slots', () => {
+  it('omits the projects section entirely when none are selected', () => {
     const { model } = modelFor('anil')
+    expect(model.sections.find((section) => section.type === 'projects')).toBeUndefined()
+  })
+
+  it('renders only the projects the operator selected', () => {
+    const { model } = modelFor('anil', sampleProjects)
     const projects = model.sections.find((section) => section.type === 'projects')!
-    const items = projects.items as { name: string; capacity: string; photos: string[] }[]
+    const items = projects.items as { name: string; capacity: string; images: unknown[] }[]
 
     expect(projects.heading).toBe('SOME OF OUR PROJECTS:')
-    expect(items).toHaveLength(7)
+    expect(items).toHaveLength(1)
     expect(items[0].name).toContain('Mayo College Girls School')
-    expect(items[0].photos.length).toBeGreaterThan(0)
-    // 14 photographs across the projects, matching the original document.
-    expect(items.reduce((sum, item) => sum + item.photos.length, 0)).toBe(14)
+    expect(items[0].images).toHaveLength(2)
+  })
+
+  it('starts the projects section, the price table, the BOM and the scope on new pages', () => {
+    const { model } = modelFor('anil', sampleProjects)
+    const broken = model.sections
+      .filter((section) => section.pageBreakBefore)
+      .map((section) => section.heading ?? section.type)
+
+    expect(broken).toEqual([
+      'QUOTATION (10.28 KW – Panels with 10 KW inverter)',
+      'BILL OF MATERIALS',
+      'SCOPE OF WORKS:',
+      'SOME OF OUR PROJECTS:',
+    ])
   })
 
   it('marks the sign-off as carrying a signature image', () => {
@@ -282,10 +331,10 @@ describe('email', () => {
 describe('PDF filename', () => {
   it('is built from the quotation number and client, stripped of path characters', () => {
     expect(
-      backend.quotationFileName({
-        quotationNumber: 'SGT/2026/04/B21',
-        leadName: 'Anil Bhaiya Ji',
-      } as never)
+      quotationFileName(
+        { quotationNumber: 'SGT/2026/04/B21', leadName: 'Anil Bhaiya Ji' },
+        'pdf'
+      )
     ).toBe('SGT-2026-04-B21 - Anil Bhaiya Ji.pdf')
   })
 })

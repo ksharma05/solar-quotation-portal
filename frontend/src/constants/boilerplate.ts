@@ -24,7 +24,12 @@ export const SCOPE_OF_WORKS: readonly string[] = [
   'Testing and commissioning of individual equipment and completion of solar plant upto AC Distribution Board.',
 ] as const
 
-export const CLIENT_SCOPE: readonly { title: string; body: string }[] = [
+export const CLIENT_SCOPE: readonly {
+  title: string
+  body: string
+  /** Verbatim substring of `body` the reference sets in bold. */
+  emphasise?: string
+}[] = [
   {
     title: 'Security of Material',
     body: 'On delivery of materials to buyer’s site in good condition, the buyer shall be responsible for safety & security of the system till handing over of the same to our designated personnel for installation.',
@@ -40,6 +45,8 @@ export const CLIENT_SCOPE: readonly { title: string; body: string }[] = [
   {
     title: 'Net Metering / Load Increasing',
     body: 'As per the Discom Guidelines (TATA Power/ AVVNL/JVVNL) net metering is an arrangement between the client and the Discom (TATA Power/ AVVNL/JVVNL) and it remains under client’s scope. All the government fees and agreement charges have to be deposited by the client regarding net-metering and load enhancement. We will only assist in the procedure, paper work and liaising.',
+    emphasise:
+      'All the government fees and agreement charges have to be deposited by the client regarding net-metering and load enhancement.',
   },
 ] as const
 
@@ -53,17 +60,6 @@ export const SUBSIDY_NOTE = (amount: string, afterSubsidy: string): string[] => 
   `NOTE :- Once client have to pay the total project cost. After that subsidy amount (that will be ${amount}) will be released afterwards.`,
   `Total Project cost after subsidy :- ${afterSubsidy}`,
 ]
-
-/** Reference projects. The 325kW document's 7-entry list is canonical. */
-export const REFERENCE_PROJECTS: readonly { name: string; capacity: string }[] = [
-  { name: 'EPC - Mayo College Girls School, Ajmer', capacity: '300 KW' },
-  { name: 'EPC - SARAS Cattle feed Dairy Ajmer Project', capacity: '600 KW' },
-  { name: 'INC - Durlab ji Hospital, Jaipur Project', capacity: '300 KW' },
-  { name: 'INC - Jwellery Zone, Jaipur Project', capacity: '100 KW' },
-  { name: 'INC - Vidhan Sabha, Jaipur Project', capacity: '600 KW' },
-  { name: 'EPC - Mahesh Marbles, Kishangarh Project', capacity: '65 KW' },
-  { name: 'EPC - Mahaveer Group Palra Industries area Ajmer', capacity: '490 KW' },
-] as const
 
 /** The single priced row. Description is fixed on both sample quotations. */
 export const PRICE_ROW_DESCRIPTION = 'Supply of equipments and installation & commissioning'

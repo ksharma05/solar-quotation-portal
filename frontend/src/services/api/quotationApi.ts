@@ -22,6 +22,7 @@ export interface SavedQuotation {
   inverterSummary: string
   pdfUrl: string
   createdAt: string
+  referenceProjectIds: string[]
   milestones: { percentage: number; description: string }[]
   bom: { material: string; details: string; quantity: string; warranty: string }[]
 }
@@ -71,6 +72,7 @@ export function saveQuotation(
       inverterSummary: inverter ? `${inverter.name} ${inverter.capacityKw} kW` : '',
       milestones: values.milestones,
       bom: [...systemBomRows(values.panels, values.inverterId), ...values.bom],
+      referenceProjectIds: values.referenceProjectIds ?? [],
     },
   })
 }
@@ -106,20 +108,27 @@ function quotationPayload(values: QuotationFormValues, ratePerWatt: number) {
     inverterKw: inverter ? inverter.capacityKw : 0,
     milestones: values.milestones,
     bom: [...systemBomRows(values.panels, values.inverterId), ...values.bom],
+    referenceProjectIds: values.referenceProjectIds ?? [],
   }
 }
 
-export function generatePdf(
+/**
+ * Files a browser-rendered PDF in Drive and records its URL against the saved row.
+ *
+ * Rendering happens client-side now, so the bytes travel up rather than down. Drive
+ * still matters because WhatsApp shares a link, not a file.
+ */
+export function storeDocument(
   token: string,
   values: QuotationFormValues,
   ratePerWatt: number,
+  document: { pdfBase64: string; fileName: string },
   id?: string
-): Promise<ApiResult<{ pdfUrl: string; fileId: string; name: string }>> {
-  // PDF rendering runs inside Apps Script and can take a while on a cold start.
+): Promise<ApiResult<{ pdfUrl: string; fileId: string; name: string; shared: boolean }>> {
   return post(
-    'generatePdf',
-    { token, id, quotation: quotationPayload(values, ratePerWatt) },
-    { timeoutMs: 60_000 }
+    'storeDocument',
+    { token, id, quotation: quotationPayload(values, ratePerWatt), ...document },
+    { timeoutMs: 120_000 }
   )
 }
 
@@ -127,12 +136,13 @@ export function sendEmail(
   token: string,
   values: QuotationFormValues,
   ratePerWatt: number,
+  document: { pdfBase64: string; fileName: string },
   id?: string
 ): Promise<ApiResult<{ sentTo: string; remainingQuota: number; pdfUrl: string }>> {
   return post(
     'sendEmail',
-    { token, id, quotation: quotationPayload(values, ratePerWatt) },
-    { timeoutMs: 60_000 }
+    { token, id, quotation: quotationPayload(values, ratePerWatt), ...document },
+    { timeoutMs: 120_000 }
   )
 }
 

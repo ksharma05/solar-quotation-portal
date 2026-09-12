@@ -1,11 +1,39 @@
 import { SMALL_SYSTEM_LIMIT_KW } from '@/constants/milestones'
 
+/** One run of cell text. `bold` picks out the specification figures the reference emphasises. */
+export interface RichRun {
+  text: string
+  bold?: boolean
+}
+
+/** A cell rendered as stacked lines, each a sequence of runs. */
+export type RichLines = RichRun[][]
+
 export interface BomSpecRow {
   material: string
   details: string
   quantity: string
   warranty: string
+  /**
+   * Optional rich rendering of `details` / `quantity`, used by the exporters when
+   * present and ignored everywhere else.
+   *
+   * Additive and optional so the persisted bomJson, the Zod schema and the BOM form are
+   * all untouched — `details` remains the plain-text source of truth. A row edited in
+   * the form must drop these, or the document would print the stale original.
+   */
+  detailsRich?: RichLines
+  quantityRich?: RichLines
 }
+
+/** Shorthand: one line of plain text. */
+const line = (text: string): RichRun[] => [{ text }]
+
+/** Shorthand: one line ending in an emphasised specification. */
+const spec = (label: string, value: string): RichRun[] => [
+  { text: label },
+  { text: value, bold: true },
+]
 
 /**
  * Bill of Materials specifications, seeded by capacity and fully editable.
@@ -34,7 +62,19 @@ const CONSTANT_ROWS: BomSpecRow[] = [
   },
   {
     material: 'Protection',
-    details: 'Lightening Arrestor: ESE Type',
+    // One grouped row whose Details cell stacks the three protection lines, as the
+    // reference prints it. The wording of each line is unchanged.
+    details:
+      'Lightening Arrestor: ESE Type; Chemical GI Gel Earthing 3 no.; Cu wire down-conductor — Structure & DC Earthing: (6 sqmm), Inverter & ACDB: (6 sqmm), LA: (6 sqmm), Module to Module Earthing (4 sqmm)',
+    detailsRich: [
+      line('Lightening Arrestor: ESE Type'),
+      line('Chemical GI Gel Earthing 3 no.'),
+      line('Cu wire down-conductor'),
+      spec('Structure & DC Earthing: ', '(6 sqmm)'),
+      spec('Inverter & ACDB: ', '(6 sqmm)'),
+      spec('LA: ', '(6 sqmm)'),
+      [{ text: 'Module to Module Earthing (4 sqmm)', bold: true }],
+    ],
     quantity: '',
     warranty: '',
   },
@@ -54,6 +94,13 @@ function smallSystemRows(capacityKw: number): BomSpecRow[] {
       material: 'Module Mounting Structure',
       details:
         'Apollo GI Structure (2MM) — Leg & Rafter: 60*60*2mm, Perlin: 60*40*2mm, Bracing: 40*40*2mm, Base Plate: 8*8*6mm',
+      detailsRich: [
+        [{ text: 'Apollo GI Structure ' }, { text: '(2MM)', bold: true }],
+        spec('Leg & Rafter: ', '60*60*2mm'),
+        spec('Perlin: ', '60*40*2mm'),
+        spec('Bracing: ', '40*40*2mm'),
+        spec('Base Plate: ', '8*8*6mm'),
+      ],
       quantity: `${label} structure`,
       warranty: '10 years from the date of commissioning.',
     },
@@ -77,22 +124,11 @@ function smallSystemRows(capacityKw: number): BomSpecRow[] {
       details:
         'External: PVC Cable tray; Internal: PVC PIPE (POLYCAB), Conduits supported with clamps / stands / cable tray at appropriate places',
       quantity: 'As required on site',
-      warranty: '',
+      // Restarts both spans: the reference prints "As required on site" and "1 Year"
+      // twice, once over the cable rows and once over the conduits/protection group.
+      warranty: '1 Year',
     },
     ...CONSTANT_ROWS.slice(2, 3),
-    {
-      material: 'Earthing',
-      details: 'Chemical GI Gel Earthing 3 no.',
-      quantity: '',
-      warranty: '',
-    },
-    {
-      material: 'Earthing wire',
-      details:
-        'Cu wire down-conductor — Structure & DC Earthing: (6 sqmm), Inverter & ACDB: (6 sqmm), LA: (6 sqmm), Module to Module Earthing (4 sqmm)',
-      quantity: '',
-      warranty: '',
-    },
     ...CONSTANT_ROWS.slice(3),
   ]
 }
@@ -134,17 +170,19 @@ function largeSystemRows(capacityKw: number): BomSpecRow[] {
       quantity: 'As required on site',
       warranty: '',
     },
-    ...CONSTANT_ROWS.slice(2, 3),
     {
-      material: 'Earthing',
-      details: 'Copper Gel Earthing (51mm Dia) 9 no.',
-      quantity: '',
-      warranty: '',
-    },
-    {
-      material: 'Earthing wire',
+      material: 'Protection',
       details:
-        'Cu wire down-conductor — 06 sqmm for structure, 04 sqmm Module to Module Earthing, 25 sqmm for Inverter and ACDB, 35 sqmm for L.A',
+        'Lightening Arrestor: ESE Type; Copper Gel Earthing (51mm Dia) 9 no.; Cu wire down-conductor — 06 sqmm for structure, 04 sqmm Module to Module Earthing, 25 sqmm for Inverter and ACDB, 35 sqmm for L.A',
+      detailsRich: [
+        line('Lightening Arrestor: ESE Type'),
+        line('Copper Gel Earthing (51mm Dia) 9 no.'),
+        line('Cu wire down-conductor'),
+        spec('', '06 sqmm for structure'),
+        spec('', '04 sqmm Module to Module Earthing'),
+        spec('', '25 sqmm for Inverter and ACDB'),
+        spec('', '35 sqmm for L.A'),
+      ],
       quantity: '',
       warranty: '',
     },

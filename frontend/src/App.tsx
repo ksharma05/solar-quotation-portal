@@ -23,6 +23,9 @@ const QuotationPage = lazy(() =>
 const HistoryPage = lazy(() =>
   import('@/pages/HistoryPage').then((m) => ({ default: m.HistoryPage }))
 )
+const ProjectsPage = lazy(() =>
+  import('@/pages/ProjectsPage').then((m) => ({ default: m.ProjectsPage }))
+)
 const SettingsPage = lazy(() =>
   import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage }))
 )
@@ -61,6 +64,7 @@ export default function App() {
           <Route path="costing" element={<CostingPage />} />
           <Route path="quotation" element={<QuotationPage />} />
           <Route path="history" element={<HistoryPage />} />
+          <Route path="projects" element={<ProjectsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>

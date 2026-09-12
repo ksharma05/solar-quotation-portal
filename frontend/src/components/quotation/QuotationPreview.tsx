@@ -3,7 +3,6 @@ import {
   CLIENT_SCOPE,
   COVER_LETTER,
   PRICE_ROW_DESCRIPTION,
-  REFERENCE_PROJECTS,
   SCOPE_OF_WORKS,
   SCOPE_OF_WORKS_INTRO,
   SUBSIDY_NOTE,
@@ -19,6 +18,7 @@ import {
 } from '@/services/pricing/quotationEngine'
 import { systemBomRows } from '@/services/quotation/documentBom'
 import { useCostingStore } from '@/stores/costingStore'
+import { useProjectsStore } from '@/stores/projectsStore'
 import { formatDocumentDate, validTillIso } from '@/utils/dates'
 import { formatINR, formatRate } from '@/utils/formatters'
 import type { QuotationFormValues } from '@/services/validation/quotationSchema'
@@ -43,6 +43,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export function QuotationPreview({ values }: { values: QuotationFormValues }) {
   const lines = useCostingStore((state) => state.lines)
   const ratePerWatt = computeTotals(lines).totalRatePerWatt
+
+  // The projects the operator actually selected, in their chosen order — the preview
+  // must agree with what the export prints, not with a fixed list.
+  const catalogue = useProjectsStore((state) => state.projects)
+  const selectedProjects = (values.referenceProjectIds ?? [])
+    .map((id) => catalogue.find((project) => project.id === id))
+    .filter((project): project is (typeof catalogue)[number] => project !== undefined)
 
   const capacityWp = capacityFromPanels(values.panels)
   const capacityKw = capacityWp / 1000
@@ -262,15 +269,33 @@ export function QuotationPreview({ values }: { values: QuotationFormValues }) {
         </ul>
       </Section>
 
-      <Section title="Some of Our Projects">
-        <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
-          {REFERENCE_PROJECTS.map((project) => (
-            <li key={project.name}>
-              <span className="font-medium">{project.name}</span> — {project.capacity}
-            </li>
-          ))}
-        </ul>
-      </Section>
+      {selectedProjects.length > 0 && (
+        <Section title="Some of Our Projects:">
+          <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+            {selectedProjects.map((project) => (
+              <li key={project.id}>
+                <span className="font-medium">{project.name}</span>
+                {project.capacity && <> — {project.capacity}</>}
+                {project.imageCount > 0 ? (
+                  <span className="text-zinc-500 dark:text-zinc-400">
+                    {' '}
+                    ({project.imageCount} photo{project.imageCount === 1 ? '' : 's'})
+                  </span>
+                ) : (
+                  // Named, not merely dimmed: this project will be absent from the
+                  // document, and the operator should learn that here rather than from
+                  // the finished PDF.
+                  <span className="text-amber-600 dark:text-amber-500">
+                    {' '}
+                    — no photographs, will not be printed
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
     </article>
   )
 }

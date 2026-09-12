@@ -10,6 +10,7 @@ import { MilestonesForm } from '@/components/forms/MilestonesForm'
 import { PanelConfigForm } from '@/components/forms/PanelConfigForm'
 import { SubsidyForm } from '@/components/forms/SubsidyForm'
 import { BomSpecsForm } from '@/components/forms/BomSpecsForm'
+import { ReferenceProjectsForm } from '@/components/forms/ReferenceProjectsForm'
 import { defaultBomRows } from '@/constants/bomDefaults'
 import { defaultMilestones } from '@/constants/milestones'
 import { suggestQuotationNumber } from '@/utils/dates'
@@ -123,6 +124,7 @@ export function QuotationForm({
       subsidyAmount: subsidyDefault,
       milestones: defaultMilestones(10),
       bom: defaultBomRows(10),
+      referenceProjectIds: [],
     },
   })
 
@@ -146,6 +148,8 @@ export function QuotationForm({
             <MilestonesForm />
             <Divider />
             <BomSpecsForm />
+            <Divider />
+            <ReferenceProjectsForm />
           </div>
 
           <div className="space-y-4 lg:sticky lg:top-6">

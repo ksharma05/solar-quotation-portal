@@ -26,6 +26,18 @@ export function BomSpecsForm() {
   const panels = useWatch({ control, name: 'panels' }) ?? []
   const capacityKw = capacityFromPanels(panels) / 1000
 
+  /**
+   * Drops the generated rich rendering of a cell once the operator edits its plain text.
+   *
+   * `detailsRich` / `quantityRich` carry the bold specification figures the reference
+   * prints. They are generated from the seeded defaults, so once the plain field is
+   * edited they are stale — and the exporters prefer them, which would print the
+   * original wording back at the operator.
+   */
+  const clearRich = (index: number, field: 'detailsRich' | 'quantityRich'): void => {
+    setValue(`bom.${index}.${field}`, undefined, { shouldDirty: true })
+  }
+
   const reseed = (): void => {
     setValue('bom', defaultBomRows(capacityKw), { shouldDirty: true, shouldValidate: true })
   }
@@ -61,11 +73,19 @@ export function BomSpecsForm() {
               </Field>
               <Field>
                 <Label>Quantity</Label>
-                <Input {...register(`bom.${index}.quantity`)} />
+                <Input
+                  {...register(`bom.${index}.quantity`, {
+                    onChange: () => clearRich(index, 'quantityRich'),
+                  })}
+                />
               </Field>
               <Field className="sm:col-span-2">
                 <Label>Details</Label>
-                <Input {...register(`bom.${index}.details`)} />
+                <Input
+                  {...register(`bom.${index}.details`, {
+                    onChange: () => clearRich(index, 'detailsRich'),
+                  })}
+                />
               </Field>
               <Field className="sm:col-span-2">
                 <Label>Warranty</Label>
